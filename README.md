@@ -1,2 +1,2 @@
 # Primise4CSharp
-CSharps implementation of Primise （Primise的C#版本）
+使用C#语言来实现的Promise，遵循Promise/A+规范
