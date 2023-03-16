@@ -6,4 +6,8 @@
     <RootNamespace>Primise4CSharp_Example</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Primise4CSharp\Primise4CSharp.csproj" />
+  </ItemGroup>
+
 </Project>

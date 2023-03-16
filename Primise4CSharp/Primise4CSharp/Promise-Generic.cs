@@ -2,24 +2,28 @@
 
 namespace Primise4CSharp
 {
-    public interface IPromise
+    public interface IPromise<PromiseT>
     {
-        public IPromise Then (Action onResolved);
-        public IPromise<T> Then<T> (Func<T> predicate);
-        public IPromise Then (Func<Promise> predicate);
+        IPromise<PromiseT> Then (Action<PromiseT> onResolved);
+
+        IPromise<T> Then<T> (Func<T> predicate);
+
         IPromise<T> Then<T> (Func<Promise<T>> predicate);
+
+        IPromise Then (Func<Promise> predicate);
     }
 
-    public class Promise : IPromise
+    public class Promise<PromiseT> : IPromise<PromiseT>
     {
         private bool _isResolved;
-        private Action _onResolve;
+        private Action<PromiseT> _onResolve;
+        private PromiseT _currentParam;
 
-        private void AddAction (Action onResolved)
+        private void AddAction (Action<PromiseT> onResolved)
         {
             if ( _isResolved )
             {
-                onResolved?.Invoke ();
+                onResolved?.Invoke (_currentParam);
             }
             else
             {
@@ -27,21 +31,21 @@ namespace Primise4CSharp
             }
         }
 
-        public IPromise Then (Action onResolved)
+        public IPromise<PromiseT> Then (Action<PromiseT> onResolved)
         {
-            Promise promise = new Promise ();
-            AddAction (() =>
+            Promise<PromiseT> promise = new Promise<PromiseT> ();
+            AddAction ((t) =>
             {
-                onResolved?.Invoke ();
-                promise.Resolve ();
+                onResolved?.Invoke (t);
+                promise.Resolve (t);
             });
             return promise;
         }
 
-        public IPromise<PromiseT> Then<PromiseT> (Func<PromiseT> predicate)
+        public IPromise<T> Then<T> (Func<T> predicate)
         {
-            Promise<PromiseT> promise = new Promise<PromiseT> ();
-            AddAction (() =>
+            Promise<T> promise = new Promise<T> ();
+            AddAction ((t) =>
             {
                 if ( predicate != null )
                 {
@@ -55,33 +59,10 @@ namespace Primise4CSharp
             return promise;
         }
 
-        public IPromise Then (Func<Promise> predicate)
-        {
-            Promise promise = new Promise ();
-            AddAction (() =>
-            {
-                if ( predicate == null )
-                {
-                    promise.Resolve ();
-                    return;
-                }
-
-                IPromise param = predicate.Invoke ();
-                if ( param == null )
-                {
-                    promise.Resolve ();
-                    return;
-                }
-
-                param.Then (promise.Resolve);
-            });
-            return promise;
-        }
-
         public IPromise<T> Then<T> (Func<Promise<T>> predicate)
         {
             Promise<T> promise = new Promise<T> ();
-            AddAction (() =>
+            AddAction ((t) =>
             {
                 if ( predicate == null )
                 {
@@ -101,10 +82,34 @@ namespace Primise4CSharp
             return promise;
         }
 
+        public IPromise Then (Func<Promise> predicate)
+        {
+            Promise promise = new Promise ();
+            AddAction ((t) =>
+            {
+                if ( predicate == null )
+                {
+                    promise.Resolve ();
+                    return;
+                }
+
+                Promise param = predicate.Invoke ();
+                if ( param == null )
+                {
+                    promise.Resolve ();
+                    return;
+                }
+
+                param.Then (promise.Resolve);
+            });
+            return promise;
+        }
+
         /// <summary>
         /// 解决
         /// </summary>
-        public void Resolve ()
+        /// <param name="param"></param>
+        public void Resolve (PromiseT @param)
         {
             if ( _isResolved )
             {
@@ -112,7 +117,8 @@ namespace Primise4CSharp
             }
 
             _isResolved = true;
-            _onResolve?.Invoke ();
+            _onResolve?.Invoke (param);
+            _currentParam = param;
             _onResolve = null;
         }
     }
