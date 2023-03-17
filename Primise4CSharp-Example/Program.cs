@@ -1,54 +1,72 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Primise4CSharp;
 
 namespace Primise4CSharp_Example
 {
     class Program
     {
-        static void Main (string [] args)
+        static async Task Main (string [] args)
         {
-            Promise promise = new Promise ();
+            Promise promise1 = new Promise ();
+            Promise promise2 = new Promise ();
+            Promise<string> promise3 = new Promise<string> ();
 
-            Promise<int> promise2 = new Promise<int> ();
-
-            promise
+            promise1
                 .Then (() =>
                 {
-                    Console.WriteLine ("start1");
-                })
-                .Then (() =>
-                {
-                    Console.WriteLine ("start2");
-                    return 1111;
-                })
-                .Then ((t) =>
-                {
-                    Console.WriteLine ($"start3 = {t}");
+                    Console.WriteLine ("Step:01");
                 })
                 .Then (() =>
                 {
-                    return "HelloWorld";
+                    return "Step:02";
                 })
-                .Then ((t) =>
+                .Then ((v) =>
                 {
-                    Console.WriteLine ($"start4 = {t}");
+                    Console.WriteLine (v);
                 })
-                .Then (() => 
+                .Then (() =>
                 {
-                    return new Promise<int> ();
+                    return promise2;
+                })
+                .Then (() =>
+                {
+                    Console.WriteLine ("Step:03");
+                })
+                .Then (() =>
+                {
+                    return promise3;
                 });
 
-            promise.Then (() => 
-            {
-                return new Promise ();
-            });
+            promise3
+                .Then ((v) =>
+                {
+                    Console.WriteLine (v);
+                });
 
-            promise2.Then (() => 
-            {
-                return new Promise<int> ();
-            });
+            promise3.Catch ((ex) =>
+                {
+                    Console.WriteLine ($"error:{ex}");
+                });
 
-            promise.Resolve ();
+            PromiseHelper.All (new IPromise [3] { promise1 , promise2 , promise3.Then (default) })
+                .Then (() =>
+                {
+                    Console.WriteLine ("All Solved");
+                });
+
+            PromiseHelper.Any (new Promise [2] { promise1 , promise2 })
+                .Then (() =>
+                {
+                    //invoke on any of the promise resolved
+                });
+
+            promise1.Resolve ();
+            await Task.Delay (1000);
+            promise2.Resolve ();
+            await Task.Delay (1000);
+            promise3.Resolve ("Step:04");
+            Console.ReadLine ();
         }
     }
 }

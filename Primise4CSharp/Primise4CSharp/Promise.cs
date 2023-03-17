@@ -2,24 +2,39 @@
 
 namespace Primise4CSharp
 {
+    public enum PromiseState
+    {
+        Pending,
+        Rejected,
+        Resolved
+    }
+
+    public interface IPromiseReject
+    {
+        void Reject (Exception ex);
+    }
+
     public interface IPromise
     {
         public IPromise Then (Action onResolved);
         public IPromise<T> Then<T> (Func<T> predicate);
         public IPromise Then (Func<Promise> predicate);
         IPromise<T> Then<T> (Func<Promise<T>> predicate);
+        IPromise Catch (Action<Exception> onRejected);
     }
 
-    public class Promise : IPromise
+    public class Promise : IPromise, IPromiseReject
     {
-        private bool _isResolved;
+        private PromiseState _state = PromiseState.Pending;
         private Action _onResolve;
+        private Action<Exception> _onReject;
+        private Exception _ex;
 
-        private void AddAction (Action onResolved)
+        private void AddResolvedHandle (Action onResolved)
         {
-            if ( _isResolved )
+            if ( _state == PromiseState.Resolved )
             {
-                onResolved?.Invoke ();
+                InvokeResolvedHander (onResolved);
             }
             else
             {
@@ -27,10 +42,34 @@ namespace Primise4CSharp
             }
         }
 
+        private void InvokeResolvedHander (Action onResolve)
+        {
+            try
+            {
+                onResolve?.Invoke ();
+            }
+            catch ( Exception ex )
+            {
+                Reject (ex);
+            }
+        }
+
+        private void AddRejectedHandle (Action<Exception> onReject)
+        {
+            if ( _state == PromiseState.Rejected )
+            {
+                onReject?.Invoke (_ex);
+            }
+            else
+            {
+                _onReject += onReject;
+            }
+        }
+
         public IPromise Then (Action onResolved)
         {
             Promise promise = new Promise ();
-            AddAction (() =>
+            AddResolvedHandle (() =>
             {
                 onResolved?.Invoke ();
                 promise.Resolve ();
@@ -41,7 +80,7 @@ namespace Primise4CSharp
         public IPromise<PromiseT> Then<PromiseT> (Func<PromiseT> predicate)
         {
             Promise<PromiseT> promise = new Promise<PromiseT> ();
-            AddAction (() =>
+            AddResolvedHandle (() =>
             {
                 if ( predicate != null )
                 {
@@ -58,7 +97,7 @@ namespace Primise4CSharp
         public IPromise Then (Func<Promise> predicate)
         {
             Promise promise = new Promise ();
-            AddAction (() =>
+            AddResolvedHandle (() =>
             {
                 if ( predicate == null )
                 {
@@ -81,7 +120,7 @@ namespace Primise4CSharp
         public IPromise<T> Then<T> (Func<Promise<T>> predicate)
         {
             Promise<T> promise = new Promise<T> ();
-            AddAction (() =>
+            AddResolvedHandle (() =>
             {
                 if ( predicate == null )
                 {
@@ -101,18 +140,46 @@ namespace Primise4CSharp
             return promise;
         }
 
-        /// <summary>
-        /// 解决
-        /// </summary>
-        public void Resolve ()
+        public IPromise Catch (Action<Exception> onRejected)
         {
-            if ( _isResolved )
+            Promise promise = new Promise ();
+            AddRejectedHandle ((Exception ex) =>
+            {
+                try
+                {
+                    onRejected.Invoke (ex);
+                    promise.Resolve ();
+                }
+                catch ( Exception e )
+                {
+                    promise.Reject (e);
+                }
+            });
+            return promise;
+        }
+
+        public void Reject (Exception ex)
+        {
+            if ( _state != PromiseState.Pending )
             {
                 return;
             }
 
-            _isResolved = true;
-            _onResolve?.Invoke ();
+            _onReject?.Invoke (ex);
+            _state = PromiseState.Rejected;
+            _ex = ex;
+            _onReject = null;
+        }
+
+        public void Resolve ()
+        {
+            if ( _state == PromiseState.Resolved )
+            {
+                return;
+            }
+
+            InvokeResolvedHander (_onResolve);
+            _state = PromiseState.Resolved;
             _onResolve = null;
         }
     }
