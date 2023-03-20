@@ -1,21 +1,21 @@
-#### 概叙
-使用C#语言来实现的Promise，适用于作为Unity的异步编程方案
+#### Overview
+Promise implemented in C# for use as an asynchronous programming solution for Unity
 
+---
 
+#### Project Descriptions
 
-#### 工程架构
+Primise4CSharp：Promise core code
 
-Primise4CSharp：Promise核心代码
+Primise4CSharp-Example：demo
 
-Primise4CSharp-Example：演示案例工程
+---
 
-
-
-#### 已实现的接口
+#### Implemented functions
 
 Then,Catch,Resolve,Reject,All,Any
 
-
+---
 
 #### How to use it
 
